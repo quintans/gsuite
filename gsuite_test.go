@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/quintans/gsuite"
-	"github.com/tj/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var (

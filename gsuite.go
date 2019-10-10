@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/tj/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
