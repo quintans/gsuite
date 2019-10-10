@@ -135,7 +135,7 @@ func verifySuite(t *testing.T, suite interface{}) {
 				t.Fatalf("Table test method %s does not have the corresponding test method %s in %v", m.Name, test, st)
 			}
 			if tm.Type.NumIn() != 2 {
-				t.Fatalf("Test method %s should have 1 argument since to be used in conjuction with %s", test, m.Name)
+				t.Fatalf("Test method %s should have 1 argument to be used in conjuction with %s", test, m.Name)
 			}
 		}
 
