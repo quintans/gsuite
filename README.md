@@ -100,4 +100,4 @@ func (s *Suite) TestUpper(t testCase) {
 
 ## Parallelism
 
-// To be implemented as a parameter to tests
+Since you have acces to `*testing.T` through the method signature we can set it in any way you wish.

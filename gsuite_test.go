@@ -40,26 +40,26 @@ func TestCalls(t *testing.T) {
 	assert.Equal(t, 2, tableTestCalledTimes)
 }
 
-func (s *Suite) SetupSuite() {
+func (s *Suite) SetupSuite(t *testing.T) {
 	setUpSuiteCalledTimes++
 	s.setUpSuiteCalledTimes++
 }
 
-func (s *Suite) TearDownSuite() {
+func (s *Suite) TearDownSuite(t *testing.T) {
 	tearDownSuiteCalledTimes++
 }
 
-func (s *Suite) Setup() {
+func (s *Suite) Setup(t *testing.T) {
 	setUpCalledTimes++
 	s.setUpCalledTimes++
 }
 
-func (s *Suite) TearDown() {
+func (s *Suite) TearDown(t *testing.T) {
 	tearDownCalledTimes++
 	s.tearDownCalledTimes++
 }
 
-func (s *Suite) TestFirstTestMethod() {
+func (s *Suite) TestFirstTestMethod(t *testing.T) {
 	testFirstCalledTimes++
 	s.Equal(1, setUpSuiteCalledTimes)
 	s.Equal(1, s.setUpSuiteCalledTimes)
@@ -69,7 +69,7 @@ func (s *Suite) TestFirstTestMethod() {
 	s.Equal(0, tearDownCalledTimes)
 }
 
-func (s *Suite) TestSecondTestMethod() {
+func (s *Suite) TestSecondTestMethod(t *testing.T) {
 	testSecondCalledTimes++
 	s.Equal(1, setUpSuiteCalledTimes)
 	s.Equal(1, s.setUpSuiteCalledTimes)
@@ -85,7 +85,7 @@ type testCase struct {
 }
 
 // TableTestThirdTestMethod output, will feed into TestThirdTestMethod
-func (s *Suite) TableTestThirdTestMethod() []testCase {
+func (s *Suite) TableTestThirdTestMethod(t *testing.T) []testCase {
 	return []testCase{
 		{
 			in:  "hello",
@@ -99,9 +99,9 @@ func (s *Suite) TableTestThirdTestMethod() []testCase {
 }
 
 // TestThirdTestMethod will be called with each element from the output slice of TableTestThirdTestMethod
-func (s *Suite) TestThirdTestMethod(t testCase) {
+func (s *Suite) TestThirdTestMethod(t *testing.T, tc testCase) {
 	tableTestCalledTimes++
-	s.Equal(t.out, upper(t.in))
+	s.Equal(tc.out, upper(tc.in))
 }
 
 func upper(s string) string {
