@@ -37,23 +37,23 @@ The available methods are.
 
 ```go
 // SetUpSuite is called once before the very first test in suite runs
-func (s *Suite) SetupSuite() {
+func (s *Suite) SetupSuite(t *testing.T) {
 }
 
 // TearDownSuite is called once after thevery last test in suite runs
-func (s *Suite) TearDownSuite() {
+func (s *Suite) TearDownSuite(t *testing.T) {
 }
 
 // SetUp is called before each test method
-func (s *Suite) SetUp() {
+func (s *Suite) SetUp(t *testing.T) {
 }
 
 // TearDown is called after each test method
-func (s *Suite) TearDown() {
+func (s *Suite) TearDown(t *testing.T) {
 }
 
 // TestXXX is our test
-func (s *Suite) TestXXX() {
+func (s *Suite) TestXXX(t *testing.T) {
 }
 ```
 
@@ -76,7 +76,7 @@ type testCase struct {
 }
 
 // TableTestUpper output, will feed into TestUpper
-func (s *Suite) TableTestUpper() []testCase {
+func (s *Suite) TableTestUpper(t *testing.T) []testCase {
 	return []testCase{
 		{
 			in:  "hello",
@@ -90,14 +90,14 @@ func (s *Suite) TableTestUpper() []testCase {
 }
 
 // TestUpper will be called with each element from the output slice of TableTestUpper
-func (s *Suite) TestUpper(t testCase) {
+func (s *Suite) TestUpper(t *testing.T, t testCase) {
 	s.Equal(t.out, upper(t.in))
 }
 
 ```
 
-> `*Suite` in `TestUpper()` will have a sub test `*testing.T` instance, derived from a common one. The level is `main > tests > parameterized test`
+> Every test will have an independent instance of `*Suite`, meaning `*Suite` in `TestUpper()` will have a sub test `*testing.T` instance, derived from a common one. The cloning of `*Suite` happens like this: `parameterized test -(copy of)-> tests -(copy of)-> root`
 
 ## Parallelism
 
-Since you have acces to `*testing.T` through the method signature we can set it in any way you wish.
+Since you have access to `*testing.T` through the method signature we can set it in any way you wish.
