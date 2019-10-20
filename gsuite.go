@@ -17,71 +17,77 @@ const (
 	setupSuiteMethod    = "SetupSuite"
 	tearDownMethod      = "TearDown"
 	tearDownSuiteMethod = "TearDownSuite"
-	embededType         = "Assertions"
+	embededType         = "Suite"
 )
 
 type SetupSuiter interface {
-	SetupSuite(t *testing.T)
+	SetupSuite()
 }
 type TearDownSuiter interface {
-	TearDownSuite(t *testing.T)
+	TearDownSuite()
 }
 
 type Setuper interface {
-	Setup(t *testing.T)
+	Setup()
 }
 type TearDowner interface {
-	TearDown(t *testing.T)
+	TearDown()
 }
 
-type TestSuite struct {
+type Suite struct {
+	*assert.Assertions
+	t *testing.T
+}
+
+func (s *Suite) T() *testing.T {
+	return s.t
 }
 
 func Run(t *testing.T, suite interface{}) {
 	verifySuite(t, suite)
 	suiteType := reflect.TypeOf(suite)
 
-	clone := cloner(suite)
+	clone := shallowCopy(suite)
 	setEmbededAssertions(t, clone)
 
 	// call setup suite
 	if s, ok := clone.(SetupSuiter); ok {
-		s.SetupSuite(t)
+		s.SetupSuite()
 	}
 	if s, ok := clone.(TearDownSuiter); ok {
-		defer s.TearDownSuite(t)
+		defer s.TearDownSuite()
 	}
 
 	for i := 0; i < suiteType.NumMethod(); i++ {
 		m := suiteType.Method(i)
 		if strings.HasPrefix(m.Name, testMethodPrefix) {
 			t.Run(m.Name, func(t *testing.T) {
-				subClone := cloner(clone)
+				subClone := shallowCopy(clone)
 				setEmbededAssertions(t, subClone)
 
 				if s, ok := subClone.(Setuper); ok {
-					s.Setup(t)
+					s.Setup()
 				}
 				if s, ok := subClone.(TearDowner); ok {
-					defer s.TearDown(t)
+					defer s.TearDown()
 				}
 
-				if m.Type.NumIn() == 3 {
+				if m.Type.NumIn() == 2 {
 					// call table tests
 					if tm, ok := suiteType.MethodByName(tableMethodPrefix + m.Name); ok {
-						out := tm.Func.Call([]reflect.Value{reflect.ValueOf(subClone), reflect.ValueOf(t)})
+						out := tm.Func.Call([]reflect.Value{reflect.ValueOf(subClone)})
 						s := out[0]
 						for i := 0; i < s.Len(); i++ {
 							t.Run(strconv.Itoa(i), func(tt *testing.T) {
 								setEmbededAssertions(tt, subClone)
-								in := []reflect.Value{reflect.ValueOf(subClone), reflect.ValueOf(tt), s.Index(i)}
+								in := []reflect.Value{reflect.ValueOf(subClone), s.Index(i)}
 								m.Func.Call(in)
 								setEmbededAssertions(t, subClone)
 							})
 						}
 					}
 				} else {
-					in := []reflect.Value{reflect.ValueOf(subClone), reflect.ValueOf(t)}
+					in := []reflect.Value{reflect.ValueOf(subClone)}
 					m.Func.Call(in)
 				}
 			})
@@ -89,7 +95,7 @@ func Run(t *testing.T, suite interface{}) {
 	}
 }
 
-func cloner(inter interface{}) interface{} {
+func shallowCopy(inter interface{}) interface{} {
 	nInter := reflect.New(reflect.TypeOf(inter).Elem())
 
 	val := reflect.ValueOf(inter).Elem()
@@ -110,7 +116,7 @@ func cloner(inter interface{}) interface{} {
 }
 
 type template struct {
-	*assert.Assertions
+	*Suite
 }
 
 var assertField, _ = reflect.TypeOf(&template{}).Elem().FieldByName(embededType)
@@ -119,7 +125,7 @@ func verifySuite(t *testing.T, suite interface{}) {
 	st := reflect.TypeOf(suite)
 	embedded, _ := st.Elem().FieldByName(embededType)
 	if embedded.Type != assertField.Type {
-		t.Fatalf("Struct %v needs to have *assert.Assertions.", st)
+		t.Fatalf("Struct %v needs to have *gsuite.Suite.", st)
 	}
 
 	for i := 0; i < st.NumMethod(); i++ {
@@ -134,27 +140,31 @@ func verifySuite(t *testing.T, suite interface{}) {
 			if !ok {
 				t.Fatalf("Table test method %s does not have the corresponding test method %s in %v", m.Name, test, st)
 			}
-			if tm.Type.NumIn() != 3 {
-				t.Fatalf("Test method %s should have 2 arguments (testing.T and test data) to be used in conjuction with %s", test, m.Name)
+			if tm.Type.NumIn() != 2 {
+				t.Fatalf("Test method %s should have 1 argument (test data) to be used in conjuction with %s", test, m.Name)
 			}
 		}
 
 		if strings.HasPrefix(m.Name, testMethodPrefix) {
-			if m.Type.NumIn() < 2 || m.Type.NumIn() > 3 {
-				t.Fatalf("Test %s in %s should have the following signature: func(*testing.T [, Test data])", m.Name, st)
-			} else if m.Type.NumIn() == 3 {
+			if m.Type.NumIn() == 2 {
 				tableTest := tableMethodPrefix + m.Name
 				_, ok := st.MethodByName(tableTest)
 				if !ok {
 					t.Fatalf("There is no table test method %s for the test method %s in %v", tableTest, m.Name, st)
 				}
+			} else if m.Type.NumIn() != 1 {
+				t.Fatalf("Test %s in %s should have the following signature: func([Test data])", m.Name, st)
 			}
 		}
 	}
 }
 
 func setEmbededAssertions(t *testing.T, suite interface{}) {
+	s := &Suite{
+		Assertions: assert.New(t),
+		t:          t,
+	}
 	v := reflect.ValueOf(suite)
 	f := v.Elem().FieldByName(embededType)
-	f.Set(reflect.ValueOf(assert.New(t)))
+	f.Set(reflect.ValueOf(s))
 }

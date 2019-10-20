@@ -18,8 +18,8 @@ var (
 	tableTestCalledTimes     int
 )
 
-type Suite struct {
-	*assert.Assertions
+type TestSuite struct {
+	*gsuite.Suite
 
 	setUpSuiteCalledTimes    int
 	tearDownSuiteCalledTimes int
@@ -28,7 +28,7 @@ type Suite struct {
 }
 
 func TestCalls(t *testing.T) {
-	s := &Suite{}
+	s := &TestSuite{}
 	gsuite.Run(t, s)
 
 	assert.Equal(t, 1, setUpSuiteCalledTimes)
@@ -40,26 +40,26 @@ func TestCalls(t *testing.T) {
 	assert.Equal(t, 2, tableTestCalledTimes)
 }
 
-func (s *Suite) SetupSuite(t *testing.T) {
+func (s *TestSuite) SetupSuite() {
 	setUpSuiteCalledTimes++
 	s.setUpSuiteCalledTimes++
 }
 
-func (s *Suite) TearDownSuite(t *testing.T) {
+func (s *TestSuite) TearDownSuite() {
 	tearDownSuiteCalledTimes++
 }
 
-func (s *Suite) Setup(t *testing.T) {
+func (s *TestSuite) Setup() {
 	setUpCalledTimes++
 	s.setUpCalledTimes++
 }
 
-func (s *Suite) TearDown(t *testing.T) {
+func (s *TestSuite) TearDown() {
 	tearDownCalledTimes++
 	s.tearDownCalledTimes++
 }
 
-func (s *Suite) TestFirstTestMethod(t *testing.T) {
+func (s *TestSuite) TestFirstTestMethod() {
 	testFirstCalledTimes++
 	s.Equal(1, setUpSuiteCalledTimes)
 	s.Equal(1, s.setUpSuiteCalledTimes)
@@ -69,7 +69,7 @@ func (s *Suite) TestFirstTestMethod(t *testing.T) {
 	s.Equal(0, tearDownCalledTimes)
 }
 
-func (s *Suite) TestSecondTestMethod(t *testing.T) {
+func (s *TestSuite) TestSecondTestMethod() {
 	testSecondCalledTimes++
 	s.Equal(1, setUpSuiteCalledTimes)
 	s.Equal(1, s.setUpSuiteCalledTimes)
@@ -85,7 +85,7 @@ type testCase struct {
 }
 
 // TableTestThirdTestMethod output, will feed into TestThirdTestMethod
-func (s *Suite) TableTestThirdTestMethod(t *testing.T) []testCase {
+func (s *TestSuite) TableTestThirdTestMethod() []testCase {
 	return []testCase{
 		{
 			in:  "hello",
@@ -99,7 +99,7 @@ func (s *Suite) TableTestThirdTestMethod(t *testing.T) []testCase {
 }
 
 // TestThirdTestMethod will be called with each element from the output slice of TableTestThirdTestMethod
-func (s *Suite) TestThirdTestMethod(t *testing.T, tc testCase) {
+func (s *TestSuite) TestThirdTestMethod(tc testCase) {
 	tableTestCalledTimes++
 	s.Equal(tc.out, upper(tc.in))
 }
