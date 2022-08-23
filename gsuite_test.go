@@ -19,8 +19,6 @@ var (
 )
 
 type TestSuite struct {
-	*gsuite.Suite
-
 	setUpSuiteCalledTimes    int
 	tearDownSuiteCalledTimes int
 	setUpCalledTimes         int
@@ -40,68 +38,67 @@ func TestCalls(t *testing.T) {
 	assert.Equal(t, 2, tableTestCalledTimes)
 }
 
-func (s *TestSuite) SetupSuite() {
+func (s *TestSuite) SetupSuite(t *gsuite.T) {
 	setUpSuiteCalledTimes++
 	s.setUpSuiteCalledTimes++
 }
 
-func (s *TestSuite) TearDownSuite() {
+func (s *TestSuite) TearDownSuite(t *gsuite.T) {
 	tearDownSuiteCalledTimes++
 }
 
-func (s *TestSuite) Setup() {
+func (s *TestSuite) Setup(t *gsuite.T) {
 	setUpCalledTimes++
 	s.setUpCalledTimes++
 }
 
-func (s *TestSuite) TearDown() {
+func (s *TestSuite) TearDown(t *gsuite.T) {
 	tearDownCalledTimes++
 	s.tearDownCalledTimes++
 }
 
-func (s *TestSuite) TestFirstTestMethod() {
+func (s *TestSuite) TestFirstTestMethod(t *gsuite.T) {
 	testFirstCalledTimes++
-	s.Equal(1, setUpSuiteCalledTimes)
-	s.Equal(1, s.setUpSuiteCalledTimes)
-	s.Equal(0, tearDownSuiteCalledTimes)
-	s.Equal(1, setUpCalledTimes)
-	s.Equal(1, s.setUpCalledTimes)
-	s.Equal(0, tearDownCalledTimes)
+	t.Equal(1, setUpSuiteCalledTimes)
+	t.Equal(1, s.setUpSuiteCalledTimes)
+	t.Equal(0, tearDownSuiteCalledTimes)
+	t.Equal(1, setUpCalledTimes)
+	t.Equal(1, s.setUpCalledTimes)
+	t.Equal(0, tearDownCalledTimes)
 }
 
-func (s *TestSuite) TestSecondTestMethod() {
+func (s *TestSuite) TestSecondTestMethod(t *gsuite.T) {
 	testSecondCalledTimes++
-	s.Equal(1, setUpSuiteCalledTimes)
-	s.Equal(1, s.setUpSuiteCalledTimes)
-	s.Equal(0, tearDownSuiteCalledTimes)
-	s.Equal(2, setUpCalledTimes)
-	s.Equal(1, s.setUpCalledTimes)
-	s.Equal(1, tearDownCalledTimes)
+	t.Equal(1, setUpSuiteCalledTimes)
+	t.Equal(1, s.setUpSuiteCalledTimes)
+	t.Equal(0, tearDownSuiteCalledTimes)
+	t.Equal(2, setUpCalledTimes)
+	t.Equal(1, s.setUpCalledTimes)
+	t.Equal(1, tearDownCalledTimes)
 }
 
-type testCase struct {
-	in  string
-	out string
-}
-
-// TableTestThirdTestMethod output, will feed into TestThirdTestMethod
-func (s *TestSuite) TableTestThirdTestMethod() []testCase {
-	return []testCase{
-		{
+// TestThirdTestMethod will be called with each element from the output slice of TableTestThirdTestMethod
+func (s *TestSuite) TestThirdTestMethod(t *gsuite.T) {
+	testCases := map[string]struct {
+		in  string
+		out string
+	}{
+		"one": {
 			in:  "hello",
 			out: "HELLO",
 		},
-		{
+		"two": {
 			in:  "world",
 			out: "WORLD",
 		},
 	}
-}
 
-// TestThirdTestMethod will be called with each element from the output slice of TableTestThirdTestMethod
-func (s *TestSuite) TestThirdTestMethod(tc testCase) {
-	tableTestCalledTimes++
-	s.Equal(tc.out, upper(tc.in))
+	for name, tc := range testCases {
+		t.Run(name, func(t *gsuite.T) {
+			tableTestCalledTimes++
+			t.Equal(tc.out, upper(tc.in))
+		})
+	}
 }
 
 func upper(s string) string {

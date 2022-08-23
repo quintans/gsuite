@@ -5,17 +5,18 @@ This project got inspiration from https://github.com/pavlo/gosuite
 
 Also, this is pretty much what testify suite (https://github.com/stretchr/testify) offers, but with the option of having parallel tests and table driven tests.
 
+The only advantage that this brings to traditional go tests is organization and the call to teardown event if a panic occurs
+
 ## Installation
 ```
 go get -u github.com/quintans/gsuite
 ```
 
 ## Quick Start
-Fist create a struct that will hold your tests. It must embed `*gsuite.Suite`
+Fist create a struct that will hold your tests
 
 ```go
-type TestSuite struct {
-    *gsuite.Suite // Required
+type MySuite struct {
     // DB connection pool
     // rest/grpc clients
     // temporary directories
@@ -24,12 +25,11 @@ type TestSuite struct {
 }
 ```
 
-
 and to run it, we use the classic go testing entry point and call our suite
 
 ```go
 func TestSuite(t *testing.T) {
-	gsuite.Run(t, &Suite{})
+	gsuite.Run(t, &MySuite{})
 }
 ```
 
@@ -39,71 +39,83 @@ The available methods are.
 
 ```go
 // SetUpSuite is called once before the very first test in suite runs
-func (s *TestSuite) SetupSuite() {
+func (s *MySuite) SetupSuite(t *gsuite.T) {
 }
 
 // TearDownSuite is called once after thevery last test in suite runs
-func (s *TestSuite) TearDownSuite() {
+func (s *MySuite) TearDownSuite(t *gsuite.T) {
 }
 
 // SetUp is called before each test method
-func (s *TestSuite) SetUp() {
+func (s *MySuite) SetUp(t *gsuite.T) {
 }
 
 // TearDown is called after each test method
-func (s *TestSuite) TearDown() {
+func (s *MySuite) TearDown(t *gsuite.T) {
 }
 
 // TestXXX is our test
-func (s *TestSuite) TestXXX() {
+func (s *MySuite) TestXXX(t *gsuite.T) {
 }
 ```
 
-`SetupSuite()` and `TearDownSuite()` share the same `*TestSuite` instance. This will be a clone of the instance passed with the `gsuite.Run()`.
+The execution calls is depicted in the following tree
 
+```
+run
+ ├ SetupSuite
+ │  ├ SetUp
+ │ 	├ TestXXX
+ │  └ TearDown
+ └ TearDownSuite
+```
 
-`Setup()` and `TearDown()` share the same `*TestSuite` instance. This will be a clone of the instance passed to `SetupSuite()` and `TearDownSuite()`, meaning that they will have the values set in `SetupSuite()` but tests will be independente instances.
+Each level will have it own copy of `MySuite`, derived from its parent level.
 
-> `*TestSuite` in `Setup()/TearDown()` will have a sub test `*testing.T` instance, derived from the one passed to `TestSuite()`.
+This means that `SetupSuite()` and `TearDownSuite()` share the same `*MySuite` instance and this instance will be a copy of the instance passed to `gsuite.Run()`.
+
+`Setup()`, `TearDown()` and `TestXXX()` share the same `*MySuite` instance and this will be a copy of the instance passed to `SetupSuite()` and `TearDownSuite()`, meaning that they will have the values set in `SetupSuite()` but tests will be independent instances.
+
+Any change made in the `Setup()` will only affect the test being executed, allowing them to run in isolation.
+
+Every test will have its own independent sub test `*testing.T`, passed in the argument `t *gsuite.T` accessible by `t.T()`, meaning `*TestSuite` in `TestUpper()` will have a sub test `*testing.T` instance, derived from a common one.
+
+The **shallow copy** of `*MySuite` happens like this:
+
 
 ## Parameterized Tests
 
-Parameterized tests are similar as table tests in go. We define a set of test cases that will be passed to a test method.
+Parameterized tests are similar as table tests in go.
 
 ```go
-// testCase defines the structure of each test case
-type testCase struct {
-	in  string
-	out string
-}
-
-// TableTestUpper output, will feed into TestUpper
-func (s *TestSuite) TableTestUpper() []testCase {
-	return []testCase{
-		{
+// TestUpper will be called with each element from the output slice of TableTestUpper
+func (s *TestSuite) TestUpper(t *gsuite.T) {
+	testCases := map[string]struct {
+		in  string
+		out string
+	}{
+		"one": {
 			in:  "hello",
 			out: "HELLO",
 		},
-		{
+		"two": {
 			in:  "world",
 			out: "WORLD",
 		},
 	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *gsuite.T) {
+			tableTestCalledTimes++
+			t.Equal(tc.out, upper(tc.in))
+		})
+	}
 }
 
-// TestUpper will be called with each element from the output slice of TableTestUpper
-func (s *TestSuite) TestUpper(t testCase) {
-	s.Equal(t.out, upper(t.in))
+func upper(s string) string {
+	return strings.ToUpper(s)
 }
-
 ```
-
-Every test will use a **shallow copy** of the initial `*TestSuite` passed as argument to `gsuite.Run()`, so any change made in the `Setup()` will only affect the test being executed, allowing them to run in isolation.
-
-Every test will have its own independent sub test `*testing.T`, accessible by `s.T()`, meaning `*TestSuite` in `TestUpper()` will have a sub test `*testing.T` instance, derived from a common one.
-
-The **shallow copy** of `*TestSuite` happens like this: `run -> test -> table test`
-
 
 ## Parallelism
 
