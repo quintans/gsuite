@@ -62,12 +62,12 @@ func (s *MySuite) TestXXX(t *gsuite.T) {
 The execution calls is depicted in the following tree
 
 ```
-run
- ├ SetupSuite
- │  ├ SetUp
- │ 	├ TestXXX
- │  └ TearDown
- └ TearDownSuite
+<run>
+ ├─ SetupSuite
+ │  ├─ SetUp
+ │  ├─ TestXXX
+ │  └─ TearDown
+ └─ TearDownSuite
 ```
 
 Each level will have it own copy of `MySuite`, derived from its parent level.
@@ -83,12 +83,9 @@ Every test will have its own independent sub test `*testing.T`, passed in the ar
 The **shallow copy** of `*MySuite` happens like this:
 
 
-## Parameterized Tests
-
-Parameterized tests are similar as table tests in go.
+## Table tests
 
 ```go
-// TestUpper will be called with each element from the output slice of TableTestUpper
 func (s *TestSuite) TestUpper(t *gsuite.T) {
 	testCases := map[string]struct {
 		in  string
@@ -119,4 +116,4 @@ func upper(s string) string {
 
 ## Parallelism
 
-Since you have access to `*testing.T`, through `s.T()`, we can set it in any way you wish.
+Since you have access to `*testing.T`, through `t.T()`, we can set it in any way you wish.
